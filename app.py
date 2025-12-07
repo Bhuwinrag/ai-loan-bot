@@ -280,16 +280,21 @@ def chat():
         else:
             # Check if numbers provided
             numbers = [int(s) for s in re.findall(r'\d+', message.replace(',', ''))]
-            if numbers:
-                try:
-                    amount = max(numbers)
-                    tenure = min(numbers)
-                    update_loan_details(session_id, amount, tenure)
-                    response_message = f"Got it. You're looking for Rs. {amount:,} for {tenure} months. Before we proceed, I need to verify your identity. Can you please confirm your 10-digit mobile number?"
-                    update_user_state(session_id, "VERIFICATION")
-                except Exception:
-                    response_message = "That's great! To find the best offer for you, how much money do you need, and for how many months? (e.g., '50000 for 12 months')"
-                    update_user_state(session_id, "NEEDS_ANALYSIS_AWAITING_REPLY")
+            if len(numbers) >= 2:
+                amount = max(numbers)
+                tenure = min(numbers)
+                update_loan_details(session_id, amount, tenure)
+                response_message = f"Got it. You're looking for Rs. {amount:,} for {tenure} months. Before we proceed, I need to verify your identity. Can you please confirm your 10-digit mobile number?"
+                update_user_state(session_id, "VERIFICATION")
+            elif len(numbers) == 1:
+                amount = numbers[0]
+                # Update only amount
+                conn = get_db_connection()
+                conn.execute('UPDATE users SET requested_amount = ? WHERE session_id = ?', (amount, session_id))
+                conn.commit()
+                conn.close()
+                response_message = f"Got it, Rs. {amount:,}. And for how many months would you like to take this loan?"
+                update_user_state(session_id, "AWAITING_TENURE")
             else:
                 response_message = "That's great! To find the best offer for you, how much money do you need, and for how many months? (e.g., '50000 for 12 months')"
                 update_user_state(session_id, "NEEDS_ANALYSIS_AWAITING_REPLY")
@@ -299,16 +304,42 @@ def chat():
         if negotiation_response:
             response_message = negotiation_response
         else:
-            try:
-                numbers = [int(s) for s in re.findall(r'\d+', message.replace(',', ''))]
-                if not numbers: raise Exception("No numbers found")
+            numbers = [int(s) for s in re.findall(r'\d+', message.replace(',', ''))]
+            if len(numbers) >= 2:
                 amount = max(numbers)
                 tenure = min(numbers)
                 update_loan_details(session_id, amount, tenure)
                 response_message = f"Got it. You're looking for Rs. {amount:,} for {tenure} months. Before we proceed, I need to verify your identity. Can you please confirm your 10-digit mobile number?"
                 update_user_state(session_id, "VERIFICATION")
-            except Exception:
+            elif len(numbers) == 1:
+                amount = numbers[0]
+                conn = get_db_connection()
+                conn.execute('UPDATE users SET requested_amount = ? WHERE session_id = ?', (amount, session_id))
+                conn.commit()
+                conn.close()
+                response_message = f"Got it, Rs. {amount:,}. And for how many months?"
+                update_user_state(session_id, "AWAITING_TENURE")
+            else:
                 response_message = "I'm sorry, I didn't quite catch that. Could you please tell me the loan amount and the tenure in months? For example: 'I need 100000 for 24 months'."
+
+    elif state == "AWAITING_TENURE":
+        numbers = [int(s) for s in re.findall(r'\d+', message.replace(',', ''))]
+        if numbers:
+            tenure = numbers[0]
+            # Update tenure
+            conn = get_db_connection()
+            conn.execute('UPDATE users SET tenure_months = ? WHERE session_id = ?', (tenure, session_id))
+            conn.commit()
+            conn.close()
+            
+            # We need to get the amount to confirm
+            user = get_user(session_id)
+            amount = user['requested_amount']
+            
+            response_message = f"Understood. Rs. {amount:,} for {tenure} months. To proceed, I need to verify your identity. Can you please confirm your 10-digit mobile number?"
+            update_user_state(session_id, "VERIFICATION")
+        else:
+            response_message = "I didn't catch the duration. Could you please tell me the number of months? (e.g., '12' or '24')"
 
     elif state == "VERIFICATION":
         phone_from_chat = re.sub(r'\D', '', message)

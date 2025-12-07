@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tata Capital - AI Loan Assistant</title>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #004a9e, #003366);
+            --bg-color: #f0f2f5;
+            --chat-bg: #ffffff;
+            --user-msg-bg: #007bff;
+            --bot-msg-bg: #f1f0f0;
+            --text-color: #333;
+            --accent-color: #28a745;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #chat-container {
+            width: 420px;
+            max-width: 95%;
+            height: 650px;
+            background-color: var(--chat-bg);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        #chat-header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #bot-avatar-header {
+            width: 40px;
+            height: 40px;
+            background-color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+        }
+
+        #header-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #header-title {
+            font-weight: 700;
+            font-size: 1.1em;
+        }
+
+        #header-subtitle {
+            font-size: 0.8em;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        #chat-messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background-color: #fff;
+        }
+
+        .message-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            opacity: 0;
+            animation: fadeIn 0.3s forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-row.user-row {
+            justify-content: flex-end;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .bot-avatar {
+            background-color: #e1f5fe;
+        }
+
+        .user-avatar {
+            background-color: #e3f2fd;
+            display: none;
+            /* Often cleaner without user avatar in bubble style, but let's keep it for "human" feel */
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 75%;
+            line-height: 1.5;
+            font-size: 0.95em;
+            word-wrap: break-word;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .bot-message {
+            background-color: var(--bot-msg-bg);
+            color: var(--text-color);
+            border-bottom-left-radius: 4px;
+        }
+
+        .user-message {
+            background-color: var(--user-msg-bg);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .bot-message a {
+            color: #0056b3;
+            font-weight: 600;
+            text-decoration: none;
+            border-bottom: 1px dotted #0056b3;
+        }
+
+        #chat-input-area,
+        #upload-area {
+            display: flex;
+            padding: 15px 20px;
+            border-top: 1px solid #f0f0f0;
+            background-color: #fff;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #upload-area {
+            display: none;
+        }
+
+        #user-input {
+            flex-grow: 1;
+            border: 1px solid #e0e0e0;
+            border-radius: 24px;
+            padding: 12px 20px;
+            font-size: 1em;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background-color: #f8f9fa;
+        }
+
+        #user-input:focus {
+            border-color: #007bff;
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+
+        #send-button,
+        #upload-button {
+            border: none;
+            background: var(--primary-gradient);
+            color: white;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        #send-button:hover,
+        #upload-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        #send-button:disabled,
+        #upload-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        #file-input {
+            flex-grow: 1;
+            font-size: 0.9em;
+        }
+
+        #upload-button {
+            border-radius: 24px;
+            width: auto;
+            padding: 0 20px;
+            font-size: 1em;
+            font-weight: 600;
+            background: var(--accent-color);
+        }
+
+        /* Scrollbar styling */
+        #chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #chat-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #chat-messages::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.1);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="chat-container">
+        <div id="chat-header">
+            <div id="bot-avatar-header">👩‍💼</div>
+            <div id="header-text">
+                <div id="header-title">Tata Capital Assistant</div>
+                <div id="header-subtitle">Always here to help</div>
+            </div>
+        </div>
+
+        <div id="chat-messages" role="log"></div>
+
+        <form id="chat-input-area" onsubmit="event.preventDefault(); return false;">
+            <input type="text" id="user-input" placeholder="Type your message..." aria-label="Chat message">
+            <button type="button" id="send-button" aria-label="Send message">➤</button>
+        </form>
+
+        <div id="upload-area">
+            <input type="file" id="file-input" name="salary_slip" accept=".pdf,.jpg,.png" required>
+            <button type="button" id="upload-button">Upload</button>
+        </div>
+    </div>
+
+    <script>
+        // --- CACHE ALL DOM ELEMENTS ---
+        const chatMessages = document.getElementById("chat-messages");
+        const chatInputArea = document.getElementById("chat-input-area");
+        const userInput = document.getElementById("user-input");
+        const sendButton = document.getElementById("send-button");
+
+        const uploadArea = document.getElementById("upload-area");
+        const fileInput = document.getElementById("file-input");
+        const uploadButton = document.getElementById("upload-button");
+
+        // --- STATE & CONSTANTS ---
+        const CHAT_URL = "http://127.0.0.1:5000/api/chat";
+        const UPLOAD_URL = "http://127.0.0.1:5000/api/upload_salary_slip";
+
+        // Generate a random Session ID (UUID v4-like)
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // Always create a new session on page load to ensure a fresh start
+        let SESSION_ID = generateUUID();
+
+        // --- FUNCTIONS ---
+
+        // Adds a message to the chat UI
+        function addMessage(message, sender) {
+            const row = document.createElement("div");
+            row.classList.add("message-row", sender === "user" ? "user-row" : "bot-row");
+
+            // Avatar logic
+            if (sender === "bot") {
+                const avatar = document.createElement("div");
+                avatar.classList.add("avatar", "bot-avatar");
+                avatar.textContent = "👩‍💼";
+                row.appendChild(avatar);
+            }
+
+            const messageBubble = document.createElement("div");
+            messageBubble.classList.add("message", `${sender}-message`);
+
+            const urlRegex = /(https?:\/\/[^\s]+|[\/][^\s]+)/g;
+            messageBubble.innerHTML = message
+                .replace(urlRegex, (url) => {
+                    if (url.endsWith('.pdf')) {
+                        let fullUrl = url.startsWith('/') ? `http://127.0.0.1:5000${url}` : url;
+                        return `<a href="${fullUrl}" target="_blank" rel="noopener noreferrer">Download Letter</a>`;
+                    }
+                    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+                });
+
+            row.appendChild(messageBubble);
+
+            chatMessages.appendChild(row);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Handles sending a text message
+        async function sendTextMessage() {
+            const message = userInput.value.trim();
+            if (message === "") return;
+
+            addMessage(message, "user");
+            userInput.value = "";
+            userInput.disabled = true;
+            sendButton.disabled = true;
+
+            try {
+                const response = await fetch(CHAT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ "message": message, "session_id": SESSION_ID }),
+                });
+
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                const data = await response.json();
+                addMessage(data.response_message, "bot");
+
+                // Check for action triggers from the bot
+                if (data.action === "show_upload_button") {
+                    chatInputArea.style.display = "none"; // Hide text input
+                    uploadArea.style.display = "flex";    // Show upload area
+                }
+
+            } catch (error) {
+                console.error("Error sending message:", error);
+                addMessage("I'm sorry, I seem to be having trouble connecting.", "bot");
+            } finally {
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                userInput.focus();
+            }
+        }
+
+        // Handles sending the file upload
+        async function handleFileUpload() {
+            const file = fileInput.files[0];
+            if (!file) {
+                addMessage("Please select a file to upload.", "bot");
+                return;
+            }
+
+            addMessage(`Uploading ${file.name}...`, "user");
+            uploadButton.disabled = true;
+            fileInput.disabled = true;
+
+            // Manually create FormData
+            const formData = new FormData();
+            formData.append("salary_slip", file);
+            formData.append("session_id", SESSION_ID);
+
+            try {
+                const response = await fetch(UPLOAD_URL, {
+                    method: "POST",
+                    body: formData, // No 'Content-Type' header needed, browser sets it
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.response_message || `HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                addMessage(data.response_message, "bot");
+
+            } catch (error) {
+                console.error("Error uploading file:", error);
+                addMessage(`Sorry, there was an error uploading your file: ${error.message}`, "bot");
+            } finally {
+                // Always reset the UI
+                uploadArea.style.display = "none";    // Hide upload area
+                chatInputArea.style.display = "flex"; // Show text input
+                uploadButton.disabled = false;
+                fileInput.disabled = false;
+                fileInput.value = ""; // Clear the file input
+            }
+        }
+
+        // Starts the conversation on page load
+        async function startConversation() {
+            // Clear any old messages
+            chatMessages.innerHTML = "";
+
+            // Parse URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+
+            const metadata = {
+                name: urlParams.get('name'),
+                amount: urlParams.get('amount'),
+                source: urlParams.get('source'),
+                campaign: urlParams.get('campaign')
+            };
+
+            try {
+                const payload = {
+                    "message": "__START__",
+                    "session_id": SESSION_ID,
+                    "metadata": metadata
+                };
+
+                const response = await fetch(CHAT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                addMessage(data.response_message, "bot");
+            } catch (error) {
+                console.error("Error starting conversation:", error);
+                addMessage("I'm sorry, I'm unable to connect right now.", "bot");
+            }
+        }
+
+        // --- EVENT LISTENERS ---
+
+        // Listen for click on text send button
+        sendButton.addEventListener("click", sendTextMessage);
+
+        // Listen for "Enter" key in text input
+        userInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault(); // This is crucial
+                sendTextMessage();
+            }
+        });
+
+        // Listen for click on file upload button
+        uploadButton.addEventListener("click", handleFileUpload);
+
+        // Start the conversation
+        window.addEventListener("load", startConversation);
+
+    </script>
+</body>
+
+</html>

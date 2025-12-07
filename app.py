@@ -203,6 +203,10 @@ def worker_sanction_letter_agent(user):
 
 # --- 5. THE MASTER AI AGENT ---
 
+@app.route("/")
+def index():
+    return send_from_directory('.', 'index.html')
+
 @app.route("/api/chat", methods=["POST"])
 def chat():
     data = request.get_json()

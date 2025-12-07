@@ -284,8 +284,9 @@
         const uploadButton = document.getElementById("upload-button");
 
         // --- STATE & CONSTANTS ---
-        const CHAT_URL = "http://127.0.0.1:5000/api/chat";
-        const UPLOAD_URL = "http://127.0.0.1:5000/api/upload_salary_slip";
+        // Use relative paths so it works on both Localhost and Live (Render)
+        const CHAT_URL = "/api/chat";
+        const UPLOAD_URL = "/api/upload_salary_slip";
 
         // Generate a random Session ID (UUID v4-like)
         function generateUUID() {
@@ -320,7 +321,9 @@
             messageBubble.innerHTML = message
                 .replace(urlRegex, (url) => {
                     if (url.endsWith('.pdf')) {
-                        let fullUrl = url.startsWith('/') ? `http://127.0.0.1:5000${url}` : url;
+                        // Use relative path for downloads too if possible, or just keep as is if backend sends full path
+                        // But backend sends /letters/filename, so we can prepend origin or just let it be relative
+                        let fullUrl = url.startsWith('/') ? url : url;
                         return `<a href="${fullUrl}" target="_blank" rel="noopener noreferrer">Download Letter</a>`;
                     }
                     return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;

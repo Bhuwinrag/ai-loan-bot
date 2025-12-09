@@ -22,12 +22,12 @@ def send_message(message, metadata=None):
 
 print(f"--- Starting Verification Session: {SESSION_ID} ---")
 
-# 1. Start / Name
+
 print("\n1. Sending Name: ParsingTestUser")
 resp = send_message("ParsingTestUser")
 print(f"Bot: {resp}")
 
-# 2. Send Amount Only
+
 print("\n2. Sending Amount: 30000")
 resp = send_message("30000")
 print(f"Bot: {resp}")
@@ -37,7 +37,6 @@ if "how many months" in resp.lower() or "duration" in resp.lower():
 else:
     print("FAILURE: Bot did not ask for tenure.")
 
-# 3. Send Tenure
 print("\n3. Sending Tenure: 12")
 resp = send_message("12")
 print(f"Bot: {resp}")

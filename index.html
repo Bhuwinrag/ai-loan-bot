@@ -273,7 +273,6 @@
     </div>
 
     <script>
-        // --- CACHE ALL DOM ELEMENTS ---
         const chatMessages = document.getElementById("chat-messages");
         const chatInputArea = document.getElementById("chat-input-area");
         const userInput = document.getElementById("user-input");
@@ -283,12 +282,10 @@
         const fileInput = document.getElementById("file-input");
         const uploadButton = document.getElementById("upload-button");
 
-        // --- STATE & CONSTANTS ---
-        // Use relative paths so it works on both Localhost and Live (Render)
         const CHAT_URL = "/api/chat";
         const UPLOAD_URL = "/api/upload_salary_slip";
 
-        // Generate a random Session ID (UUID v4-like)
+
         function generateUUID() {
             return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
                 var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -296,17 +293,13 @@
             });
         }
 
-        // Always create a new session on page load to ensure a fresh start
+
         let SESSION_ID = generateUUID();
 
-        // --- FUNCTIONS ---
-
-        // Adds a message to the chat UI
         function addMessage(message, sender) {
             const row = document.createElement("div");
             row.classList.add("message-row", sender === "user" ? "user-row" : "bot-row");
 
-            // Avatar logic
             if (sender === "bot") {
                 const avatar = document.createElement("div");
                 avatar.classList.add("avatar", "bot-avatar");
@@ -335,7 +328,6 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        // Handles sending a text message
         async function sendTextMessage() {
             const message = userInput.value.trim();
             if (message === "") return;
@@ -357,7 +349,6 @@
                 const data = await response.json();
                 addMessage(data.response_message, "bot");
 
-                // Check for action triggers from the bot
                 if (data.action === "show_upload_button") {
                     chatInputArea.style.display = "none"; // Hide text input
                     uploadArea.style.display = "flex";    // Show upload area
@@ -373,7 +364,6 @@
             }
         }
 
-        // Handles sending the file upload
         async function handleFileUpload() {
             const file = fileInput.files[0];
             if (!file) {
@@ -385,7 +375,6 @@
             uploadButton.disabled = true;
             fileInput.disabled = true;
 
-            // Manually create FormData
             const formData = new FormData();
             formData.append("salary_slip", file);
             formData.append("session_id", SESSION_ID);
@@ -393,7 +382,7 @@
             try {
                 const response = await fetch(UPLOAD_URL, {
                     method: "POST",
-                    body: formData, // No 'Content-Type' header needed, browser sets it
+                    body: formData, 
                 });
 
                 if (!response.ok) {
@@ -409,20 +398,19 @@
                 addMessage(`Sorry, there was an error uploading your file: ${error.message}`, "bot");
             } finally {
                 // Always reset the UI
-                uploadArea.style.display = "none";    // Hide upload area
-                chatInputArea.style.display = "flex"; // Show text input
+                uploadArea.style.display = "none";    
+                chatInputArea.style.display = "flex"; 
                 uploadButton.disabled = false;
                 fileInput.disabled = false;
-                fileInput.value = ""; // Clear the file input
+                fileInput.value = ""; 
             }
         }
 
-        // Starts the conversation on page load
+
         async function startConversation() {
-            // Clear any old messages
+
             chatMessages.innerHTML = "";
 
-            // Parse URL parameters
             const urlParams = new URLSearchParams(window.location.search);
 
             const metadata = {
@@ -452,12 +440,8 @@
             }
         }
 
-        // --- EVENT LISTENERS ---
-
-        // Listen for click on text send button
         sendButton.addEventListener("click", sendTextMessage);
 
-        // Listen for "Enter" key in text input
         userInput.addEventListener("keydown", (event) => {
             if (event.key === "Enter") {
                 event.preventDefault(); // This is crucial
@@ -465,10 +449,8 @@
             }
         });
 
-        // Listen for click on file upload button
         uploadButton.addEventListener("click", handleFileUpload);
 
-        // Start the conversation
         window.addEventListener("load", startConversation);
 
     </script>

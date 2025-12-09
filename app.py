@@ -7,7 +7,6 @@ from flask_cors import CORS
 from fpdf import FPDF
 from werkzeug.utils import secure_filename
 
-# --- 1. SETUP THE FLASK APP ---
 app = Flask(__name__)
 CORS(app)
 
@@ -19,7 +18,6 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 if not os.path.exists("letters"):
     os.makedirs("letters")
 
-# --- 2. DATABASE SETUP (SQLite) ---
 DB_NAME = "loans.db"
 
 def init_db():
@@ -48,16 +46,13 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-# --- 3. DYNAMIC DATA HELPERS ---
 def create_user_profile(session_id, name):
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Generate dynamic data
-    # Simulate credit score between 600 and 850
     credit_score = random.randint(600, 850)
     
-    # Simulate limit based on score
+
     if credit_score > 750:
         limit = random.choice([100000, 150000, 200000, 250000, 500000])
     elif credit_score > 650:
@@ -65,7 +60,6 @@ def create_user_profile(session_id, name):
     else:
         limit = random.choice([20000, 30000, 40000])
 
-    # Generate a random phone number for verification simulation
     phone = f"9{random.randint(100000000, 999999999)}"
 
     cursor.execute('''
@@ -95,7 +89,6 @@ def update_loan_details(session_id, amount, tenure):
     conn.commit()
     conn.close()
 
-# --- 4. WORKER AI AGENTS ---
 
 def worker_sales_agent(user):
     print(f"[Sales Agent] Crafting persuasive greeting for {user['name']}")
@@ -121,10 +114,7 @@ def worker_negotiation_agent(message):
 
 def worker_verification_agent(user, phone_from_chat):
     print(f"[Verification Agent] Checking {user['name']} with phone {phone_from_chat}")
-    # In a real app, we'd check against the DB. Here, we check against the generated phone
-    # OR, for better UX in this demo, we can just accept ANY valid 10-digit number as "verified" 
-    # since the user doesn't know the random number we generated.
-    # BUT, to keep the "simulation" logic intact, let's just say we verify if it's a valid 10 digit number.
+    
     
     if re.match(r'^\d{10}$', phone_from_chat):
         print("[Verification Agent] SUCCESS (Format Valid)")
@@ -159,7 +149,7 @@ def worker_underwriting_agent(user, salary_slip_salary=None):
                 return {"status": "rejected", "reason": f"Your monthly income of Rs. {salary_slip_salary:,} is not sufficient for an EMI of Rs. {monthly_emi:,.0f}."}
     return {"status": "rejected", "reason": "We are unable to process your loan at this time."}
 
-# Worker Agent 5: Sanction Letter Agent
+
 def worker_sanction_letter_agent(user):
     print(f"[Sanction Letter Agent] Generating PDF for {user['name']}")
     try:
@@ -201,7 +191,6 @@ def worker_sanction_letter_agent(user):
         print(f"[Sanction Letter Agent] FAILED: {e}")
         return {"status": "failed"}
 
-# --- 5. THE MASTER AI AGENT ---
 
 @app.route("/")
 def index():
@@ -213,63 +202,52 @@ def chat():
     if not data: return jsonify({"response_message": "Error: No JSON data received."}), 400
     
     message = data.get("message")
-    session_id = data.get("session_id") # Changed from customer_id
-    metadata = data.get("metadata", {}) # Get metadata if available
+    session_id = data.get("session_id")
+    metadata = data.get("metadata", {}) 
     
     if not message or not session_id: return jsonify({"response_message": "Error: 'message' or 'session_id' missing."}), 400
     
     user = get_user(session_id)
     
-    # --- NEW: CAMPAIGN / URL PARAMETER HANDLING ---
+
     if not user and metadata.get("name"):
-        # If user doesn't exist but we have a name from URL, create profile immediately
         name = metadata.get("name")
         create_user_profile(session_id, name)
         
-        # If amount is also provided, store it
+
         if metadata.get("amount"):
              conn = get_db_connection()
              conn.execute("UPDATE users SET requested_amount = ? WHERE session_id = ?", (metadata.get("amount"), session_id))
              conn.commit()
              conn.close()
              
-        # Skip GREETING, go straight to OFFER (NEEDS_ANALYSIS)
         user = get_user(session_id) # Reload user
         
-        # Generate personalized offer immediately
         response_message = (
             f"Welcome back, {user['name']}! We have a special pre-approved offer for you.\n"
             f"You are eligible for a personal loan of up to Rs. {user['pre_approved_limit']:,}!\n"
             "Are you interested in proceeding with this offer?"
         )
-        # Update state to NEEDS_ANALYSIS so next message is treated as response to offer
         update_user_state(session_id, "NEEDS_ANALYSIS")
         
         return jsonify({"response_message": response_message})
 
-    # --- NEW: ASK FOR NAME FLOW ---
     if not user:
-        # If user doesn't exist, this is the first interaction (or restart)
-        # We expect the message to be their name if we are in the "ASK_NAME" phase, 
-        # but actually, the frontend will likely send "__START__" first.
         
         if message == "__START__":
-             # Just return a prompt for the name. We don't create the user yet.
              return jsonify({"response_message": "Hello! Welcome to Tata Capital. May I know your name?"})
         else:
-            # Assume the message IS the name
             name = message.strip()
             if len(name) < 2:
                  return jsonify({"response_message": "Please enter a valid name."})
             
-            # Create the user profile dynamically
+           
             user_data = create_user_profile(session_id, name)
             
-            # Now generate the sales greeting
+            
             sales_response = worker_sales_agent(user_data)
             return jsonify({"response_message": sales_response["message"]})
 
-    # User exists, proceed with state machine
     state = user['state']
     response_message = ""
     
@@ -278,7 +256,6 @@ def chat():
             response_message = "No problem at all! We're here if you change your mind. Have a great day!"
             update_user_state(session_id, "ENDED")
         else:
-            # Check if numbers provided
             numbers = [int(s) for s in re.findall(r'\d+', message.replace(',', ''))]
             if len(numbers) >= 2:
                 amount = max(numbers)
@@ -392,7 +369,6 @@ def run_underwriting(session_id, salary=None):
 
     return jsonify(response_data)
 
-# --- 6. FILE UPLOAD ENDPOINT ---
 @app.route("/api/upload_salary_slip", methods=["POST"])
 def upload_salary_slip():
     try:
@@ -421,7 +397,6 @@ def upload_salary_slip():
         print(f"[Upload Error] {e}")
         return jsonify({"response_message": "An internal error occurred."}), 500
 
-# --- 7. PDF DOWNLOAD ENDPOINT ---
 @app.route("/letters/<filename>", methods=["GET"])
 def get_letter(filename):
     try:
@@ -429,7 +404,6 @@ def get_letter(filename):
     except FileNotFoundError:
         return jsonify({"error": "File not found."}), 404
 
-# --- 8. RUN THE SERVER ---
 if __name__ == "__main__":
     print("Backend server is running on http://127.0.0.1:5000")
     print("New upload folder created at: /uploads")
